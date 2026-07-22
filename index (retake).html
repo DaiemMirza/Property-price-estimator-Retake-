@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content ="width=device-width, initial-scale=1.0">
+        <title>Property Price Estimator</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f4f4f4;
+                padding: 40px;
+                text-align: center;
+            }
+            h1{
+                color: #2c3e50
+            }
+            .container {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                width: 440px;
+                margin: auto;
+                box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+            }
+            select, input{
+                width: 90%;
+                padding: 8px;
+                margin: 10px 0;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            button {
+                background-color: #3498db;
+                color:white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 1em;
+            }
+            button:hover {
+                background-color: #2980b9;
+            }
+            #result {
+                margin-top: 20px;
+                font-size: 1.3em;
+                color: #16a085;
+                font-weight: bold;
+            }
+            #breakdown {
+                margin-top: 15px;
+                text-align: left;
+                background: #f9f9f9;
+                border-radius: 6px;
+                padding: 12px 16px;
+                font-size: 0.9em;
+                color: #333;
+                display: none;
+            }
+            #breakdown table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            #breakdown td {
+                padding: 4px 0;
+            }
+            #breakdown td.value {
+                text-align: right;
+                font-weight: bold;
+            }
+            #explainToggle {
+                margin-top: 10px;
+                font-size: 0.85em;
+                color: #3498db;
+                cursor: pointer;
+                text-decoration: underline;
+                display: none;
+            }
+            #explainText {
+                margin-top: 8px;
+                font-size: 0.85em;
+                color: #555;
+                text-align: left;
+                display: none;
+                line-height: 1.4;
+            }
+            footer{
+                margin-top: 40px;
+                font-size: 0.9em;
+                color: #777;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Property Price Estimator</h1>
+        <p>This tool helps first-time buyers estimate a fair property price and understand the costs involved, based on area, property type and bedrooms.</p>
+        <div class="container">
+            <label for="location">Select Area:</label><br>
+            <select id="location">
+                <optgroup label="London (by Zone)">
+                    <option value="London-Zone1">Zone 1</option>
+                    <option value="London-Zone2">Zone 2</option>
+                    <option value="London-Zone3">Zone 3</option>
+                    <option value="London-Zone4">Zone 4</option>
+                    <option value="London-Zone5">Zone 5</option>
+                    <option value="London-Zone6">Zone 6</option>
+                    <option value="London-Zone7">Zone 7</option>
+                    <option value="London-Zone8">Zone 8</option>
+                    <option value="London-Zone9">Zone 9</option>
+                </optgroup>
+                <optgroup label="Manchester">
+                    <option value="Manchester-CityCentre">City Centre</option>
+                    <option value="Manchester-Didsbury">Didsbury</option>
+                    <option value="Manchester-Salford">Salford</option>
+                </optgroup>
+                <optgroup label="Birmingham">
+                    <option value="Birmingham-CityCentre">City Centre</option>
+                    <option value="Birmingham-Edgbaston">Edgbaston</option>
+                    <option value="Birmingham-Solihull">Solihull</option>
+                </optgroup>
+                <optgroup label="Leeds">
+                    <option value="Leeds-CityCentre">City Centre</option>
+                    <option value="Leeds-Headingley">Headingley</option>
+                </optgroup>
+                <optgroup label="Liverpool">
+                    <option value="Liverpool-CityCentre">City Centre</option>
+                    <option value="Liverpool-Woolton">Woolton</option>
+                </optgroup>
+            </select><br>
+            <label for="type">Property Type:</label><br>
+            <select id="type">
+                <option value="flat">Flat</option>
+                <option value="terraced">Terraced</option>
+                <option value="semi-detached">Semi-Detached</option>
+                <option value="detached">Detached</option>
+                </select><br>
+                <label for="bedrooms">Number of Bedrooms:</label><br>
+                <input type="number" id="bedrooms" min="1" value="2"><br>
+                <button onclick="estimatePrice()">Estimate Price</button>
+                <div id="result"></div>
+
+                <div id="breakdown">
+                    <table>
+                        <tr><td>Estimated fair price</td><td class="value" id="bd-price"></td></tr>
+                        <tr><td>Typical deposit (10%)</td><td class="value" id="bd-deposit"></td></tr>
+                        <tr><td>Estimated Stamp Duty (first-time buyer)</td><td class="value" id="bd-stampduty"></td></tr>
+                        <tr><td>Approx. mortgage needed</td><td class="value" id="bd-mortgage"></td></tr>
+                    </table>
+                </div>
+
+                <div id="explainToggle" onclick="toggleExplain()">How is this calculated?</div>
+                <div id="explainText"></div>
+                </div>
+
+                <footer>Estimates are indicative only and based on average area data, not a live valuation of a specific property.</footer>
+
+                <script>
+                    // Base average price per square-metre-equivalent for each specific
+                    // area (not whole city), so estimates reflect that prices vary a
+                    // lot within the same city rather than using one figure per city.
+                    const areaPrices = {
+                        "London-Zone1": 850000,
+                        "London-Zone2": 650000,
+                        "London-Zone3": 520000,
+                        "London-Zone4": 460000,
+                        "London-Zone5": 420000,
+                        "London-Zone6": 390000,
+                        "London-Zone7": 370000,
+                        "London-Zone8": 355000,
+                        "London-Zone9": 340000,
+
+                        "Manchester-CityCentre": 290000,
+                        "Manchester-Didsbury": 340000,
+                        "Manchester-Salford": 230000,
+
+                        "Birmingham-CityCentre": 260000,
+                        "Birmingham-Edgbaston": 300000,
+                        "Birmingham-Solihull": 340000,
+
+                        "Leeds-CityCentre": 250000,
+                        "Leeds-Headingley": 270000,
+
+                        "Liverpool-CityCentre": 210000,
+                        "Liverpool-Woolton": 260000
+                    };
+
+                    const typeMultiplier = {
+                        "flat": 0.8,
+                        "terraced": 0.9,
+                        "semi-detached": 1.0,
+                        "detached": 1.25
+                    };
+
+                    // UK Stamp Duty Land Tax bands for first-time buyers (England),
+                    // simplified for estimation purposes.
+                    function estimateStampDuty(price) {
+                        if (price <= 425000) return 0;
+                        if (price <= 625000) return (price - 425000) * 0.05;
+                        // Above 625,000 first-time buyer relief no longer applies;
+                        // standard residential bands used instead (simplified).
+                        let duty = 0;
+                        duty += 250000 * 0.00;
+                        duty += (625000 - 250000) * 0.05;
+                        duty += (price - 625000) * 0.10;
+                        return duty;
+                    }
+
+                    function estimatePrice() {
+                        const locationKey = document.getElementById("location").value;
+                        const type = document.getElementById("type").value;
+                        const bedrooms = parseInt(document.getElementById("bedrooms").value) || 1;
+
+                        const base = areaPrices[locationKey] || 250000;
+                        const price = base * typeMultiplier[type] + (bedrooms - 1) * 25000;
+                        const roundedPrice = Math.round(price);
+
+                        const deposit = Math.round(roundedPrice * 0.10);
+                        const mortgage = roundedPrice - deposit;
+                        const stampDuty = Math.round(estimateStampDuty(roundedPrice));
+
+                        const output = document.getElementById("result");
+                        output.innerHTML = `Estimated fair price: £${roundedPrice.toLocaleString()}`;
+
+                        document.getElementById("bd-price").innerText = `£${roundedPrice.toLocaleString()}`;
+                        document.getElementById("bd-deposit").innerText = `£${deposit.toLocaleString()}`;
+                        document.getElementById("bd-stampduty").innerText = `£${stampDuty.toLocaleString()}`;
+                        document.getElementById("bd-mortgage").innerText = `£${mortgage.toLocaleString()}`;
+                        document.getElementById("breakdown").style.display = "block";
+
+                        const locationLabel = document.getElementById("location").selectedOptions[0].textContent;
+                        document.getElementById("explainText").innerHTML =
+                            `The estimate starts from the typical average price for <strong>${locationLabel}</strong> ` +
+                            `specifically, rather than the city as a whole, because prices can vary significantly between ` +
+                            `different areas of the same city. This is then adjusted by a multiplier for the property type ` +
+                            `(${type}, ×${typeMultiplier[type]}) and £25,000 is added for each bedroom beyond the first, ` +
+                            `since larger properties are generally worth more.`;
+
+                        document.getElementById("explainToggle").style.display = "block";
+                    }
+
+                    function toggleExplain() {
+                        const el = document.getElementById("explainText");
+                        const isOpen = el.style.display === "block";
+                        el.style.display = isOpen ? "none" : "block";
+                        document.getElementById("explainToggle").innerText = isOpen ? "How is this calculated?" : "Hide explanation";
+                    }
+                </script>
+
+
+    </body>
+
+</html>
